@@ -557,9 +557,10 @@
                 const now = new Date();
                 const interest = new Date(interestDate);
                 
-                // Define o horário de expiração para 19:00 do dia da reserva
+                // Define o horário de expiração para 00:00 do dia seguinte
                 const expirationTime = new Date(interest);
-                expirationTime.setHours(19, 0, 0, 0);
+                expirationTime.setDate(expirationTime.getDate() + 1);
+                expirationTime.setHours(0, 0, 0, 0);
                 
                 const diffTime = expirationTime.getTime() - now.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -567,8 +568,8 @@
 
                 if (diffTime < 0) {
                     return { status: 'expired', text: 'Expirado', class: 'expired' };
-                } else if (diffDays === 0) {
-                    // Mesmo dia - mostra horas restantes
+                } else if (diffDays === 1) {
+                    // Mesmo dia - mostra horas restantes até meia-noite
                     return { status: 'warning', text: `${diffHours}h restantes`, class: 'warning' };
                 } else if (diffDays <= 2) {
                     return { status: 'warning', text: `${diffDays} dias`, class: 'warning' };
@@ -587,9 +588,10 @@
                 this.list = this.list.filter(person => {
                     const interestDate = new Date(person.interestDate);
                     
-                    // Define o horário de expiração para 19:00 do dia da reserva
+                    // Define o horário de expiração para 00:00 do dia seguinte
                     const expirationTime = new Date(interestDate);
-                    expirationTime.setHours(19, 0, 0, 0);
+                    expirationTime.setDate(expirationTime.getDate() + 1);
+                    expirationTime.setHours(0, 0, 0, 0);
                     
                     const diffTime = expirationTime.getTime() - now.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -597,16 +599,16 @@
 
                     if (diffTime < 0) {
                         hasExpired = true;
-                        return false; // Remove pessoas com data expirada (após 19:00)
-                    } else if (diffDays === 0) {
+                        return false; // Remove pessoas com data expirada (após meia-noite)
+                    } else if (diffDays === 1) {
                         // Mesmo dia da reserva
                         todayReservations.push(person);
                         hasWarnings = true;
-                    } else if (diffDays === 1) {
+                    } else if (diffDays === 2) {
                         // Reserva para amanhã
                         urgentReservations.push(person);
                         hasWarnings = true;
-                    } else if (diffDays <= 2) {
+                    } else if (diffDays <= 3) {
                         hasWarnings = true;
                     }
                     return true;
@@ -615,7 +617,7 @@
                 if (hasExpired) {
                     this.saveList();
                     this.renderList();
-                    this.showAlert('Registros expirados (após 19:00) foram removidos automaticamente', 'warning');
+                    this.showAlert('Registros expirados (após meia-noite) foram removidos automaticamente', 'warning');
                 }
 
                 if (todayReservations.length > 0) {
@@ -662,6 +664,13 @@
                 return 'male';
             }
 
+            formatDateDDMMYY(date) {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                return `${day}/${month}/${year}`;
+            }
+
             renderList() {
                 const container = document.getElementById('waitingList');
                 const totalCount = document.getElementById('totalCount');
@@ -675,8 +684,8 @@
                 const html = this.list.map((person, index) => {
                     const statusInfo = this.getPersonStatus(person.interestDate);
                     const whatsappLink = this.generateWhatsAppLink(person);
-                    const addedDate = new Date(person.addedAt).toLocaleDateString('pt-BR');
-                    const interestDateFormatted = new Date(person.interestDate).toLocaleDateString('pt-BR');
+                    const addedDate = this.formatDateDDMMYY(new Date(person.addedAt));
+                    const interestDateFormatted = this.formatDateDDMMYY(new Date(person.interestDate));
 
                     return `
                         <div class="list-item">
@@ -841,7 +850,7 @@
                 
                 todayReservations.forEach(person => {
                     const personDiv = document.createElement('p');
-                    personDiv.innerHTML = `<span class="person-name" style="font-size: 1.5rem;">${person.name}</span><br>Data: HOJE (${new Date(person.interestDate).toLocaleDateString('pt-BR')})<br>Tel: ${person.number}`;
+                    personDiv.innerHTML = `<span class="person-name" style="font-size: 1.5rem;">${person.name}</span><br>Data: HOJE (${this.formatDateDDMMYY(new Date(person.interestDate))})<br>Tel: ${person.number}`;
                     personDiv.style.margin = '20px 0';
                     personDiv.style.padding = '15px';
                     personDiv.style.background = 'rgba(255, 255, 255, 0.1)';
@@ -926,7 +935,7 @@
                 
                 urgentReservations.forEach(person => {
                     const personDiv = document.createElement('p');
-                    personDiv.innerHTML = `<span class="person-name">${person.name}</span><br>Data: ${new Date(person.interestDate).toLocaleDateString('pt-BR')}<br>Tel: ${person.number}`;
+                    personDiv.innerHTML = `<span class="person-name">${person.name}</span><br>Data: ${this.formatDateDDMMYY(new Date(person.interestDate))}<br>Tel: ${person.number}`;
                     content.appendChild(personDiv);
                 });
                 
@@ -955,5 +964,5 @@
         // Inicializar o sistema
         new WaitingListManager();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984a3a34a6d7f63a',t:'MTc1ODgwMDIyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984a51b7b0d2f634',t:'MTc1ODgwMTE4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
