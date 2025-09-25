@@ -555,7 +555,7 @@
                 }
 
                 // Validação: data de saída deve ser após data de entrada
-                if (new Date(exitDate) <= new Date(interestDate)) {
+                if (exitDate <= interestDate) {
                     this.showAlert('A data de saída deve ser posterior à data de entrada', 'error');
                     return;
                 }
@@ -604,61 +604,64 @@
 
             getPersonStatus(interestDate) {
                 const now = new Date();
-                const interest = new Date(interestDate);
+                const today = now.toISOString().split('T')[0]; // Data atual no formato YYYY-MM-DD
+                const interestDateStr = interestDate; // Mantém como string
                 
-                // Define o horário de expiração para 00:00 do dia seguinte
-                const expirationTime = new Date(interest);
-                expirationTime.setDate(expirationTime.getDate() + 1);
-                expirationTime.setHours(0, 0, 0, 0);
-                
-                const diffTime = expirationTime.getTime() - now.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-
-                if (diffTime < 0) {
+                // Compara diretamente as strings de data
+                if (interestDateStr < today) {
                     return { status: 'expired', text: 'Expirado', class: 'expired' };
-                } else if (diffDays === 1) {
-                    // Mesmo dia - mostra horas restantes até meia-noite
-                    return { status: 'warning', text: `${diffHours}h restantes`, class: 'warning' };
-                } else if (diffDays <= 2) {
-                    return { status: 'warning', text: `${diffDays} dias`, class: 'warning' };
+                } else if (interestDateStr === today) {
+                    return { status: 'warning', text: 'Hoje', class: 'warning' };
                 } else {
-                    return { status: 'active', text: `${diffDays} dias`, class: 'active' };
+                    // Calcula diferença em dias
+                    const interestDateObj = new Date(interestDateStr + 'T12:00:00'); // Meio-dia para evitar problemas de fuso
+                    const todayObj = new Date(today + 'T12:00:00');
+                    const diffTime = interestDateObj.getTime() - todayObj.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays === 1) {
+                        return { status: 'warning', text: 'Amanhã', class: 'warning' };
+                    } else if (diffDays <= 2) {
+                        return { status: 'warning', text: `${diffDays} dias`, class: 'warning' };
+                    } else {
+                        return { status: 'active', text: `${diffDays} dias`, class: 'active' };
+                    }
                 }
             }
 
             checkDates() {
                 const now = new Date();
+                const today = now.toISOString().split('T')[0]; // Data atual no formato YYYY-MM-DD
                 let hasExpired = false;
                 let hasWarnings = false;
                 let urgentReservations = [];
                 let todayReservations = [];
 
                 this.list = this.list.filter(person => {
-                    const interestDate = new Date(person.interestDate);
+                    const interestDateStr = person.interestDate; // Mantém como string
                     
-                    // Define o horário de expiração para 00:00 do dia seguinte
-                    const expirationTime = new Date(interestDate);
-                    expirationTime.setDate(expirationTime.getDate() + 1);
-                    expirationTime.setHours(0, 0, 0, 0);
-                    
-                    const diffTime = expirationTime.getTime() - now.getTime();
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-
-                    if (diffTime < 0) {
+                    // Compara diretamente as strings de data
+                    if (interestDateStr < today) {
                         hasExpired = true;
-                        return false; // Remove pessoas com data expirada (após meia-noite)
-                    } else if (diffDays === 1) {
+                        return false; // Remove pessoas com data expirada
+                    } else if (interestDateStr === today) {
                         // Mesmo dia da reserva
                         todayReservations.push(person);
                         hasWarnings = true;
-                    } else if (diffDays === 2) {
-                        // Reserva para amanhã
-                        urgentReservations.push(person);
-                        hasWarnings = true;
-                    } else if (diffDays <= 3) {
-                        hasWarnings = true;
+                    } else {
+                        // Calcula diferença em dias
+                        const interestDate = new Date(interestDateStr + 'T12:00:00'); // Meio-dia para evitar problemas de fuso
+                        const todayDate = new Date(today + 'T12:00:00');
+                        const diffTime = interestDate.getTime() - todayDate.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays === 1) {
+                            // Reserva para amanhã
+                            urgentReservations.push(person);
+                            hasWarnings = true;
+                        } else if (diffDays <= 2) {
+                            hasWarnings = true;
+                        }
                     }
                     return true;
                 });
@@ -666,7 +669,7 @@
                 if (hasExpired) {
                     this.saveList();
                     this.renderList();
-                    this.showAlert('Registros expirados (após meia-noite) foram removidos automaticamente', 'warning');
+                    this.showAlert('Registros expirados foram removidos automaticamente', 'warning');
                 }
 
                 if (todayReservations.length > 0) {
@@ -683,8 +686,8 @@
                 const pronoun = gender === 'female' ? 'senhora' : 'senhor';
                 const article = gender === 'female' ? 'a' : 'o';
                 
-                const entryDate = this.formatDateDDMMYY(new Date(person.interestDate));
-                const exitDate = this.formatDateDDMMYY(new Date(person.exitDate));
+                const entryDate = this.formatDateDDMMYY(person.interestDate);
+                const exitDate = this.formatDateDDMMYY(person.exitDate);
                 
                 const message = `Olá ${person.name}! Verificamos em nosso sistema que ${article} ${pronoun} encontra-se atualmente na nossa lista de espera para o período de ${entryDate} até ${exitDate}. Gostaríamos de saber se ${article} ${pronoun} ainda tem interesse em continuar.`;
                 
@@ -716,7 +719,15 @@
                 return 'male';
             }
 
-            formatDateDDMMYY(date) {
+            formatDateDDMMYY(dateInput) {
+                let date;
+                if (typeof dateInput === 'string') {
+                    // Se for string no formato YYYY-MM-DD, converte para Date
+                    date = new Date(dateInput + 'T12:00:00');
+                } else {
+                    // Se já for um objeto Date
+                    date = dateInput;
+                }
                 const day = String(date.getDate()).padStart(2, '0');
                 const month = String(date.getMonth() + 1).padStart(2, '0');
                 const year = String(date.getFullYear()).slice(-2);
@@ -744,12 +755,12 @@
                     const statusInfo = this.getPersonStatus(person.interestDate);
                     const whatsappLink = this.generateWhatsAppLink(person);
                     const addedDate = this.formatDateDDMMYY(new Date(person.addedAt));
-                    const interestDateFormatted = this.formatDateDDMMYY(new Date(person.interestDate));
-                    const exitDateFormatted = person.exitDate ? this.formatDateDDMMYY(new Date(person.exitDate)) : 'Não informado';
+                    const interestDateFormatted = this.formatDateDDMMYY(person.interestDate);
+                    const exitDateFormatted = person.exitDate ? this.formatDateDDMMYY(person.exitDate) : 'Não informado';
                     
                     // Calcula quantos dias de estadia
-                    const entryDate = new Date(person.interestDate);
-                    const exitDate = new Date(person.exitDate);
+                    const entryDate = new Date(person.interestDate + 'T12:00:00');
+                    const exitDate = new Date(person.exitDate + 'T12:00:00');
                     const diffTime = exitDate.getTime() - entryDate.getTime();
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -921,7 +932,7 @@
                 
                 todayReservations.forEach(person => {
                     const personDiv = document.createElement('p');
-                    personDiv.innerHTML = `<span class="person-name" style="font-size: 1.5rem;">${person.name}</span><br>Data: HOJE (${this.formatDateDDMMYY(new Date(person.interestDate))})<br>Tel: ${person.number}`;
+                    personDiv.innerHTML = `<span class="person-name" style="font-size: 1.5rem;">${person.name}</span><br>Data: HOJE (${this.formatDateDDMMYY(person.interestDate)})<br>Tel: ${person.number}`;
                     personDiv.style.margin = '20px 0';
                     personDiv.style.padding = '15px';
                     personDiv.style.background = 'rgba(255, 255, 255, 0.1)';
@@ -1006,7 +1017,7 @@
                 
                 urgentReservations.forEach(person => {
                     const personDiv = document.createElement('p');
-                    personDiv.innerHTML = `<span class="person-name">${person.name}</span><br>Data: ${this.formatDateDDMMYY(new Date(person.interestDate))}<br>Tel: ${person.number}`;
+                    personDiv.innerHTML = `<span class="person-name">${person.name}</span><br>Data: ${this.formatDateDDMMYY(person.interestDate)}<br>Tel: ${person.number}`;
                     content.appendChild(personDiv);
                 });
                 
@@ -1035,5 +1046,5 @@
         // Inicializar o sistema
         const waitingListManager = new WaitingListManager();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984b3f67225af630',t:'MTc1ODgxMDkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984b52d330a6f633',t:'MTc1ODgxMTcxNy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
