@@ -126,7 +126,7 @@
 
         .form-grid {
             display: grid;
-            grid-template-columns: 1fr 2fr 2fr auto;
+            grid-template-columns: 1fr 2fr 1.5fr 1.5fr auto;
             gap: 15px;
             align-items: end;
             margin-bottom: 20px;
@@ -207,7 +207,7 @@
 
         .list-item {
             display: grid;
-            grid-template-columns: 60px 1fr 2fr 150px 120px auto auto;
+            grid-template-columns: 60px 1fr 2.5fr 150px 120px auto auto;
             gap: 15px;
             padding: 15px 20px;
             border-bottom: 1px solid #333;
@@ -469,8 +469,12 @@
                         <input type="text" id="name" required>
                     </div>
                     <div class="form-group">
-                        <label for="interestDate">Data de Interesse</label>
+                        <label for="interestDate">Data de Entrada</label>
                         <input type="date" id="interestDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="exitDate">Data de Saída</label>
+                        <input type="date" id="exitDate" required>
                     </div>
                     <div class="form-group">
                         <button type="submit" class="btn btn-primary">Adicionar</button>
@@ -517,6 +521,15 @@
             setMinDate() {
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('interestDate').min = today;
+                document.getElementById('exitDate').min = today;
+                
+                // Adiciona evento para validar que data de saída seja após data de entrada
+                document.getElementById('interestDate').addEventListener('change', (e) => {
+                    const entryDate = e.target.value;
+                    if (entryDate) {
+                        document.getElementById('exitDate').min = entryDate;
+                    }
+                });
             }
 
             bindEvents() {
@@ -534,9 +547,16 @@
                 const number = document.getElementById('number').value.trim();
                 const name = document.getElementById('name').value.trim();
                 const interestDate = document.getElementById('interestDate').value;
+                const exitDate = document.getElementById('exitDate').value;
 
-                if (!number || !name || !interestDate) {
+                if (!number || !name || !interestDate || !exitDate) {
                     this.showAlert('Preencha todos os campos', 'error');
+                    return;
+                }
+
+                // Validação: data de saída deve ser após data de entrada
+                if (new Date(exitDate) <= new Date(interestDate)) {
+                    this.showAlert('A data de saída deve ser posterior à data de entrada', 'error');
                     return;
                 }
 
@@ -545,6 +565,7 @@
                     number,
                     name,
                     interestDate,
+                    exitDate,
                     addedAt: new Date().toISOString()
                 };
 
@@ -662,7 +683,10 @@
                 const pronoun = gender === 'female' ? 'senhora' : 'senhor';
                 const article = gender === 'female' ? 'a' : 'o';
                 
-                const message = `Olá ${person.name}! Verificamos em nosso sistema que ${article} ${pronoun} encontra-se atualmente na nossa lista de espera para a vaga em questão. Gostaríamos de saber se ${article} ${pronoun} ainda tem interesse em continuar.`;
+                const entryDate = this.formatDateDDMMYY(new Date(person.interestDate));
+                const exitDate = this.formatDateDDMMYY(new Date(person.exitDate));
+                
+                const message = `Olá ${person.name}! Verificamos em nosso sistema que ${article} ${pronoun} encontra-se atualmente na nossa lista de espera para o período de ${entryDate} até ${exitDate}. Gostaríamos de saber se ${article} ${pronoun} ainda tem interesse em continuar.`;
                 
                 const encodedMessage = encodeURIComponent(message);
                 return `https://wa.me/55${person.number.replace(/\D/g, '')}?text=${encodedMessage}`;
@@ -721,6 +745,13 @@
                     const whatsappLink = this.generateWhatsAppLink(person);
                     const addedDate = this.formatDateDDMMYY(new Date(person.addedAt));
                     const interestDateFormatted = this.formatDateDDMMYY(new Date(person.interestDate));
+                    const exitDateFormatted = person.exitDate ? this.formatDateDDMMYY(new Date(person.exitDate)) : 'Não informado';
+                    
+                    // Calcula quantos dias de estadia
+                    const entryDate = new Date(person.interestDate);
+                    const exitDate = new Date(person.exitDate);
+                    const diffTime = exitDate.getTime() - entryDate.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
                     return `
                         <div class="list-item">
@@ -728,7 +759,9 @@
                             <div class="name">${person.name}</div>
                             <div class="date-info">
                                 <div>Adicionado: ${addedDate}</div>
-                                <div>Interesse: ${interestDateFormatted}</div>
+                                <div>Entrada: ${interestDateFormatted}</div>
+                                <div>Saída: ${exitDateFormatted}</div>
+                                <div>Período: ${diffDays} dia${diffDays !== 1 ? 's' : ''}</div>
                                 <div>Tel: ${person.number}</div>
                             </div>
                             <div class="status ${statusInfo.class}">${statusInfo.text}</div>
@@ -1002,5 +1035,5 @@
         // Inicializar o sistema
         const waitingListManager = new WaitingListManager();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984a8ef1e400f632',t:'MTc1ODgwMzY5NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984b3f67225af630',t:'MTc1ODgxMDkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
