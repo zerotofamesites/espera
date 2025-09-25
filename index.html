@@ -207,7 +207,7 @@
 
         .list-item {
             display: grid;
-            grid-template-columns: 60px 1fr 2fr 150px 120px auto;
+            grid-template-columns: 60px 1fr 2fr 150px 120px auto auto;
             gap: 15px;
             padding: 15px 20px;
             border-bottom: 1px solid #333;
@@ -284,6 +284,23 @@
 
         .whatsapp-btn:hover {
             background: #128c7e;
+            transform: scale(1.05);
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
             transform: scale(1.05);
         }
 
@@ -549,6 +566,15 @@
                 }
             }
 
+            deletePerson(personId) {
+                if (confirm('Tem certeza que deseja remover esta pessoa da lista?')) {
+                    this.list = this.list.filter(person => person.id !== personId);
+                    this.saveList();
+                    this.renderList();
+                    this.showAlert('Pessoa removida com sucesso!', 'success');
+                }
+            }
+
             saveList() {
                 localStorage.setItem('waitingList', JSON.stringify(this.list));
             }
@@ -707,6 +733,9 @@
                             <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="whatsapp-btn">
                                 📱 WhatsApp
                             </a>
+                            <button class="delete-btn" onclick="waitingListManager.deletePerson(${person.id})">
+                                🗑️ Excluir
+                            </button>
                         </div>
                     `;
                 }).join('');
@@ -969,7 +998,7 @@
         }
 
         // Inicializar o sistema
-        new WaitingListManager();
+        const waitingListManager = new WaitingListManager();
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984a84a060c1f632',t:'MTc1ODgwMzI3Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'984a878cb77df632',t:'MTc1ODgwMzM5MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
